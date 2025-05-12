@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(cors);
 
     // Bind and serve
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     println!("🚀 Server running on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
