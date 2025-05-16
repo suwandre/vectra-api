@@ -1,12 +1,11 @@
-use axum::{
-    routing::get,
-    Router,
-    extract::Extension,
-};
+use axum::extract::Extension;
+use routes::router;
 use sqlx::postgres::PgPoolOptions;
 use std::{env, net::SocketAddr};
 use tower_http::cors::{CorsLayer, Any};
 use dotenv::dotenv;
+
+mod routes;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -28,8 +27,7 @@ async fn main() -> anyhow::Result<()> {
         .allow_headers(Any);
 
     // Build Axum router
-    let app = Router::new()
-        .route("/", get(health_check))
+    let app = router()
         .layer(Extension(db))
         .layer(cors);
 
@@ -41,9 +39,4 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, app).await?;
 
     Ok(())
-}
-
-// Example handler
-async fn health_check() -> &'static str {
-    "Vectra backend is alive!"
 }
