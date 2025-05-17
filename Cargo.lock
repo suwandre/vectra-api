@@ -1976,6 +1976,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "vectra-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "uuid",
+]
+
+[[package]]
 name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
