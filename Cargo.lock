@@ -1990,6 +1990,7 @@ dependencies = [
 name = "vectra-storage"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "chrono",
  "serde",
  "sqlx",
