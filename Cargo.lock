@@ -201,6 +201,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-link",
 ]
@@ -1950,6 +1951,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
 dependencies = [
  "getrandom 0.3.3",
+ "serde",
 ]
 
 [[package]]
@@ -1973,6 +1975,7 @@ dependencies = [
  "tokio",
  "tower-http",
  "uuid",
+ "vectra-storage",
 ]
 
 [[package]]
@@ -1980,6 +1983,16 @@ name = "vectra-core"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "uuid",
+]
+
+[[package]]
+name = "vectra-storage"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "sqlx",
  "uuid",
 ]
 
