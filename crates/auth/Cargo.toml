@@ -1,0 +1,14 @@
+[package]
+name = "vectra-auth"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+anyhow = { workspace = true }
+ethers = { workspace = true }
+vectra-storage = { path = "../storage" }

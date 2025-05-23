@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 use anyhow::Result;
 
-/// Inserts or updates nonce for a wallet login session into the database.
+/// Inserts or updates a nonce for a wallet login session into the database.
 pub async fn upsert_nonce(pool: &PgPool, address: &str, nonce: &str) -> Result<()> {
     sqlx::query!(
         r#"
