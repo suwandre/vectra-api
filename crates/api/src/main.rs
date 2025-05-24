@@ -20,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
         .max_connections(5)
         .connect(&database_url)
         .await?;
-    
+
     // CORS layer for dev (permissive)
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -33,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Bind and serve
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
-    println!("🚀 Server running on http://{}", addr);
+    println!("🚀 Server is running on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
