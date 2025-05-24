@@ -1,0 +1,6 @@
+[build]
+path = "."
+
+[env]
+SQLX_OFFLINE = "true"
+DATABASE_URL = "${{ Postgres.DATABASE_URL }}"         # runtime (internal/private)
