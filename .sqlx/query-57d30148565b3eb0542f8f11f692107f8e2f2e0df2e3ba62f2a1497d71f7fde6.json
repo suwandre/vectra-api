@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM login_sessions WHERE wallet_address = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "57d30148565b3eb0542f8f11f692107f8e2f2e0df2e3ba62f2a1497d71f7fde6"
+}
