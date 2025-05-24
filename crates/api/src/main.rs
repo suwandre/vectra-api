@@ -20,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
         .max_connections(5)
         .connect(&database_url)
         .await?;
-
+    
     // CORS layer for dev (permissive)
     let cors = CorsLayer::new()
         .allow_origin(Any)
