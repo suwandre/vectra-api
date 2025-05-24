@@ -11,7 +11,6 @@ async fn main() -> anyhow::Result<()> {
     // Load environment variables from .env
     dotenv().ok();
     let database_url = env::var("DATABASE_URL")
-        .or_else(|_| env::var("DATABASE_PUBLIC_URL"))
         .expect("Database URL must be set in .env");
 
     println!("Connecting to database: {}", database_url);
