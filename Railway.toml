@@ -3,7 +3,7 @@
 builder      = "nixpacks"
 buildCommand = """
   cargo install sqlx-cli --no-default-features --features postgres && \
-  export SQLX_DATABASE_URL='${{DATABASE_PUBLIC_URL}}' && \
+  export SQLX_DATABASE_URL=\"${{Postgres.DATABASE_PUBLIC_URL}}\" && \
   cargo sqlx prepare --workspace -- --lib && \
-  cargo build --release
+  cargo build --release \
 """
