@@ -1,6 +1,6 @@
 use axum::{
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{IntoResponse},
     Json,
 };
 use serde_json::json;
@@ -20,7 +20,7 @@ pub enum AppError {
 
 /// Converts `AppError` into an HTTP response using Axum's `IntoResponse` trait.
 impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
+    fn into_response(self) -> axum::response::Response {
         match self {
             AppError::Unauthorized(msg) => {
                 // 401 Unauthorized with a JSON error message

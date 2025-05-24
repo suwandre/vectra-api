@@ -1,14 +1,17 @@
 use axum::{extract::State, Json};
 use vectra_storage::repo::auth::{upsert_nonce, get_nonce};
 use vectra_storage::repo::user::get_or_create_user;
+use crate::jwt::issue_jwt;
 use crate::{types::*, error::AppError, utils, crypto::recover_wallet_address};
 use sqlx::PgPool;
+use axum_macros::debug_handler;
 
 /// Generates a login nonce for the given wallet address.
-/// This message is later signed by the wallet to prove ownership.
+/// This message is later signed by the wallet to prove ownership. 
+#[debug_handler]
 pub async fn generate_nonce(
-    Json(req): Json<NonceRequest>,     // Extract JSON body into NonceRequest
     State(pool): State<PgPool>,        // Inject the database connection pool
+    Json(req): Json<NonceRequest>,     // Extract JSON body into NonceRequest
 ) -> Result<Json<NonceResponse>, AppError> {
     let nonce = utils::generate_nonce();      // Generate a secure random nonce
     let message = format!(             // Format the message to be signed by the user
@@ -26,9 +29,10 @@ pub async fn generate_nonce(
 
 /// Verifies the signed message and logs the user in.
 /// If the user doesn't exist, they're created on the fly.
+#[debug_handler]
 pub async fn verify_signature(
-    Json(req): Json<VerifyRequest>,    // Extract JSON body into VerifyRequest
     State(pool): State<PgPool>,        // Inject the database connection pool
+    Json(req): Json<VerifyRequest>,    // Extract JSON body into VerifyRequest
 ) -> Result<Json<AuthResponse>, AppError> {
     // Fetch expected nonce from DB
     let Some(expected_nonce) = get_nonce(&pool, &req.wallet_address)
@@ -65,7 +69,7 @@ pub async fn verify_signature(
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
     // Issue a JWT for the session
-    let token = issue_jwt(&user)?;
+    let token = issue_jwt(&user.id)?;
 
     // Respond with the token
     Ok(Json(AuthResponse { token }))

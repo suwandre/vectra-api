@@ -1,4 +1,3 @@
-use axum::extract::Extension;
 use routes::router;
 use sqlx::postgres::PgPoolOptions;
 use std::{env, net::SocketAddr};
@@ -27,8 +26,7 @@ async fn main() -> anyhow::Result<()> {
         .allow_headers(Any);
 
     // Build Axum router
-    let app = router()
-        .layer(Extension(db))
+    let app = router(db)
         .layer(cors);
 
     // Bind and serve

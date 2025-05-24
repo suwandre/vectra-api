@@ -5,10 +5,14 @@ edition = "2021"
 
 [dependencies]
 axum = { workspace = true }
+axum-macros = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }
 anyhow = { workspace = true }
 ethers = { workspace = true }
+chrono = { workspace = true }
+jsonwebtoken = { workspace = true }
+uuid = { workspace = true }
 vectra-storage = { path = "../storage" }
