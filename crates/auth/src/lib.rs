@@ -5,3 +5,4 @@ pub mod error;
 pub mod crypto;
 pub mod routes;
 pub mod jwt;
+pub mod auth_middleware;

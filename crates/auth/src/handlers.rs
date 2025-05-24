@@ -1,26 +1,27 @@
-use axum::{extract::State, Json};
-use vectra_storage::repo::auth::{upsert_nonce, get_nonce};
-use vectra_storage::repo::user::get_or_create_user;
 use crate::jwt::issue_jwt;
-use crate::{types::*, error::AppError, utils, crypto::recover_wallet_address};
-use sqlx::PgPool;
+use crate::{crypto::recover_wallet_address, error::AppError, types::*, utils};
+use axum::{extract::State, Json};
 use axum_macros::debug_handler;
+use chrono::{Duration, TimeZone, Utc};
+use sqlx::PgPool;
+use vectra_storage::repo::auth::{delete_login_session, get_nonce, upsert_nonce};
+use vectra_storage::repo::user::get_or_create_user;
 
 /// Generates a login nonce for the given wallet address.
-/// This message is later signed by the wallet to prove ownership. 
+/// This message is later signed by the wallet to prove ownership.
 #[debug_handler]
 pub async fn generate_nonce(
-    State(pool): State<PgPool>,        // Inject the database connection pool
-    Json(req): Json<NonceRequest>,     // Extract JSON body into NonceRequest
+    State(pool): State<PgPool>,    // Inject the database connection pool
+    Json(req): Json<NonceRequest>, // Extract JSON body into NonceRequest
 ) -> Result<Json<NonceResponse>, AppError> {
-    let nonce = utils::generate_nonce();      // Generate a secure random nonce
-    let message = format!(             // Format the message to be signed by the user
+    let nonce = utils::generate_nonce(); // Generate a secure random nonce
+    let message = format!(
+        // Format the message to be signed by the user
         "Sign in to Vectra\nWallet: {}\nNonce: {}",
-        req.wallet_address,
-        nonce
+        req.wallet_address, nonce
     );
 
-    upsert_nonce(&pool, &req.wallet_address, &nonce)    // Store nonce in DB
+    upsert_nonce(&pool, &req.wallet_address, &nonce) // Store nonce in DB
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
@@ -31,46 +32,55 @@ pub async fn generate_nonce(
 /// If the user doesn't exist, they're created on the fly.
 #[debug_handler]
 pub async fn verify_signature(
-    State(pool): State<PgPool>,        // Inject the database connection pool
-    Json(req): Json<VerifyRequest>,    // Extract JSON body into VerifyRequest
+    State(pool): State<PgPool>,
+    Json(req): Json<VerifyRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
-    // Fetch expected nonce from DB
-    let Some(expected_nonce) = get_nonce(&pool, &req.wallet_address)
+    // 1) Fetch stored nonce + timestamp option
+    let (expected_nonce, created_at) = get_nonce(&pool, &req.wallet_address)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?
-    else {
-        return Err(AppError::Unauthorized("Nonce not found".into()));
-    };
+        .ok_or_else(|| AppError::Unauthorized("Nonce not found".into()))?;
 
-    // Rebuild the expected message
+    // 2) Convert to UTC DateTime and enforce a 10-minute TTL
+    let created_at_utc = Utc.from_utc_datetime(&created_at);
+    if Utc::now().signed_duration_since(created_at_utc) > Duration::minutes(10) {
+        delete_login_session(&pool, &req.wallet_address).await.ok();
+        return Err(AppError::Unauthorized("Nonce expired".into()));
+    }
+
+    // 3) Rebuild and compare the expected message
     let expected_msg = format!(
         "Sign in to Vectra\nWallet: {}\nNonce: {}",
-        req.wallet_address,
-        expected_nonce
+        req.wallet_address, expected_nonce
     );
-
-    // Make sure the message exactly matches what the user signed
     if req.message != expected_msg {
+        delete_login_session(&pool, &req.wallet_address).await.ok();
         return Err(AppError::Unauthorized("Message mismatch".into()));
     }
 
-    // Recover signer address from the signature
+    // 4) Recover signer and verify address
     let signer = recover_wallet_address(&req.message, &req.signature)
         .ok_or_else(|| AppError::Unauthorized("Invalid signature".into()))?;
-
-    // Ensure recovered signer matches claimed wallet address
     if signer.to_lowercase() != req.wallet_address.to_lowercase() {
-        return Err(AppError::Unauthorized("Signature doesn't match address".into()));
+        delete_login_session(&pool, &req.wallet_address).await.ok();
+        return Err(AppError::Unauthorized(
+            "Signature doesn't match address".into(),
+        ));
     }
 
-    // Fetch or create user
+    // 5) Create or fetch the user record
     let user = get_or_create_user(&pool, &req.wallet_address)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
-    // Issue a JWT for the session
+    // 6) Issue a JWT
     let token = issue_jwt(&user.id)?;
 
-    // Respond with the token
+    // 7) Invalidate the nonce on successful login
+    delete_login_session(&pool, &req.wallet_address)
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+
+    // 8) Return the token
     Ok(Json(AuthResponse { token }))
 }

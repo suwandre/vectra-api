@@ -1,5 +1,6 @@
-use sqlx::PgPool;
 use anyhow::Result;
+use chrono::NaiveDateTime;
+use sqlx::PgPool;
 
 /// Inserts or updates a nonce for a wallet login session into the database.
 pub async fn upsert_nonce(pool: &PgPool, address: &str, nonce: &str) -> Result<()> {
@@ -17,14 +18,32 @@ pub async fn upsert_nonce(pool: &PgPool, address: &str, nonce: &str) -> Result<(
     Ok(())
 }
 
-/// Gets a stored nonce for a given wallet address from the database.
-pub async fn get_nonce(pool: &PgPool, address: &str) -> Result<Option<String>> {
+/// Gets a stored nonce **and its creation timestamp** for a given wallet address.
+pub async fn get_nonce(
+    pool: &PgPool,
+    address: &str,
+) -> Result<Option<(String, NaiveDateTime)>> {
     let rec = sqlx::query!(
-        "SELECT nonce FROM login_sessions WHERE wallet_address = $1",
+        r#"
+        SELECT nonce, created_at
+          FROM login_sessions
+         WHERE wallet_address = $1
+        "#,
         address
     )
     .fetch_optional(pool)
     .await?;
 
-    Ok(rec.map(|r| r.nonce))
+    Ok(rec.map(|r| (r.nonce, r.created_at)))
+}
+
+/// Deletes a login session (nonce) after use or expiry.
+pub async fn delete_login_session(pool: &PgPool, address: &str) -> Result<()> {
+    sqlx::query!(
+        "DELETE FROM login_sessions WHERE wallet_address = $1",
+        address
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
 }
