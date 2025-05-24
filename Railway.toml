@@ -1,4 +1,4 @@
-# railway.toml
+# Railway.toml
 [build]
 builder      = "nixpacks"
 buildCommand = """
