@@ -13,6 +13,8 @@ async fn main() -> anyhow::Result<()> {
     let database_url = env::var("DATABASE_URL")
         .expect("DATABASE_URL must be set in .env");
 
+    println!("Connecting to database: {}", database_url);
+
     // Connect to PostgreSQL
     let db = PgPoolOptions::new()
         .max_connections(5)
