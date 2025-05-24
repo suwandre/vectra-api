@@ -1,18 +1,15 @@
 # railway.toml
 [env]
-# this tells Railway: “when you spin up the build container,
-# set SQLX_DATABASE_URL to the plugin’s public URL”
+# Railway will interpolate the real public URL here at build time
 SQLX_DATABASE_URL = "${{Postgres.DATABASE_PUBLIC_URL}}"
 
 [build]
 builder      = "nixpacks"
 buildCommand = """
-  # 1) install the sqlx CLI so we can prepare
+bash -lc '\
   cargo install sqlx-cli --no-default-features --features postgres && \
-  # 2) sanity-check that Railway actually set SQLX_DATABASE_URL
-  echo \"SQLX_DATABASE_URL is $SQLX_DATABASE_URL\" && \
-  # 3) generate offline metadata against the public endpoint
+  echo SQLX_DATABASE_URL is $SQLX_DATABASE_URL && \
   cargo sqlx prepare --workspace -- --lib && \
-  # 4) build your release binary
-  cargo build --release
+  cargo build --release\
+'
 """
