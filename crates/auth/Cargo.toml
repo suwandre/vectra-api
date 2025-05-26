@@ -15,4 +15,7 @@ ethers = { workspace = true }
 chrono = { workspace = true }
 jsonwebtoken = { workspace = true }
 uuid = { workspace = true }
+siwe = { workspace = true }
+iri-string = { workspace = true }
+time = { workspace = true }
 vectra-storage = { path = "../storage" }

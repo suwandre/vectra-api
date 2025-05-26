@@ -1,11 +1,18 @@
 use crate::jwt::issue_jwt;
 use crate::{crypto::recover_wallet_address, error::AppError, types::*, utils};
+use axum::http::uri::Authority;
 use axum::{extract::State, Json};
 use axum_macros::debug_handler;
 use chrono::{Duration, TimeZone, Utc};
+use ethers::types::Address;
+use iri_string::spec::UriSpec;
+use iri_string::types::RiString;
 use sqlx::PgPool;
+use siwe::{Message, TimeStamp, Version};
+use time::OffsetDateTime;
 use vectra_storage::repo::auth::{delete_login_session, get_nonce, upsert_nonce};
 use vectra_storage::repo::user::get_or_create_user;
+
 
 /// Generates a login nonce for the given wallet address.
 /// This message is later signed by the wallet to prove ownership.
@@ -14,18 +21,53 @@ pub async fn generate_nonce(
     State(pool): State<PgPool>,    // Inject the database connection pool
     Json(req): Json<NonceRequest>, // Extract JSON body into NonceRequest
 ) -> Result<Json<NonceResponse>, AppError> {
-    let nonce = utils::generate_nonce(); // Generate a secure random nonce
-    let message = format!(
-        // Format the message to be signed by the user
-        "Sign in to Vectra\nWallet: {}\nNonce: {}",
-        req.wallet_address, nonce
-    );
+    // Generate the random nonce and instantiate all the required fields for `siwe_msg`
+    let nonce = utils::generate_nonce();
 
-    upsert_nonce(&pool, &req.wallet_address, &nonce) // Store nonce in DB
+    let domain: Authority = req
+        .domain
+        .parse()
+        .map_err(|e| AppError::BadRequest(format!("Invalid domain: {}", e)))?;
+
+    let eth_addr: Address = req
+        .wallet_address
+        .parse()
+        .map_err(|e| AppError::BadRequest(format!("Invalid wallet address: {}", e)))?;
+    let address: [u8; 20] = eth_addr.0;
+
+    let uri: RiString<UriSpec> = req
+        .uri
+        .parse()
+        .map_err(|e| AppError::BadRequest(format!("Invalid URI: {}", e)))?;
+
+    let now: TimeStamp = OffsetDateTime::now_utc().into();
+
+    // Build the SIWE message
+    let siwe_msg = Message {
+        domain,
+        address,
+        statement: Some("Sign in to Vectra".into()),
+        uri,
+        version: Version::V1,
+        chain_id: req.chain_id,
+        nonce: nonce.clone(),
+        issued_at: now,
+        expiration_time: None,
+        not_before: None,
+        request_id: None,
+        resources: Vec::new(),
+    };
+
+    // Serialize the message into the human-readable string
+    let message = siwe_msg.to_string();
+
+    // Store the nonce in DB (created_at set automatically)
+    upsert_nonce(&pool, &req.wallet_address, &nonce)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
-    Ok(Json(NonceResponse { message })) // Return the message to frontend
+    // Return the SIWE message
+    Ok(Json(NonceResponse { message }))
 }
 
 /// Verifies the signed message and logs the user in.
