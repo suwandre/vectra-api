@@ -32,11 +32,13 @@ pub struct VerifyRequest {
     pub signature: String,
 }
 
-/// Represents an authentication response instance.
+/// Server → client after login (initial verify) or refresh
 #[derive(Serialize)]
 pub struct AuthResponse {
-    /// The authentication token generated for the user.
-    pub token: String,
+    /// Short‐lived access JWT (e.g. 15m)
+    pub access_token: String,
+    /// Long‐lived refresh token (e.g. 30d)
+    pub refresh_token: String,
 }
 
 /// Client → server when asking for new access + refresh tokens

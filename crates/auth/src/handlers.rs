@@ -1,4 +1,3 @@
-use crate::jwt::issue_jwt;
 use crate::service::issue_tokens;
 use crate::{error::AppError, types::*, utils};
 use axum::http::uri::Authority;
@@ -126,19 +125,24 @@ pub async fn verify_signature(
         return Err(AppError::Unauthorized("Address mismatch".into()));
     }
 
-    // 9) Fetch or create the user and issue a JWT
+    // 9) Fetch-or-create the user
     let user = get_or_create_user(&pool, &req.wallet_address)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
-    let token = issue_jwt(&user.id)?;
 
-    // 10) Invalidate the nonce
+    // 10) Issue both access and refresh tokens
+    let (access_token, refresh_token) = issue_tokens(&pool, user.id).await?;
+
+    // 11) Invalidate the nonce
     delete_login_session(&pool, &req.wallet_address)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
-    // 11) Return the token
-    Ok(Json(AuthResponse { token }))
+    // 12) Return both tokens
+    Ok(Json(AuthResponse {
+        access_token,
+        refresh_token,
+    }))
 }
 
 /// Refreshes the user’s authentication tokens.
