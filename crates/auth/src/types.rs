@@ -25,9 +25,9 @@ pub struct NonceResponse {
 pub struct VerifyRequest {
     /// The wallet address of the user used upon signature verification.
     pub wallet_address: String,
-    /// The message (including the nonce) used upon signature verification.
+    /// The message (including the nonce) used upon signature verification. Uses raw EIP-4361 format.
     pub message: String,
-    /// The underlying signature of the user.
+    /// The underlying EIP-191 or EIP-712 signature of the user.
     pub signature: String,
 }
 

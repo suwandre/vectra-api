@@ -1,14 +1,15 @@
 use crate::jwt::issue_jwt;
-use crate::{crypto::recover_wallet_address, error::AppError, types::*, utils};
+use crate::{error::AppError, types::*, utils};
 use axum::http::uri::Authority;
 use axum::{extract::State, Json};
 use axum_macros::debug_handler;
 use chrono::{Duration, TimeZone, Utc};
 use ethers::types::Address;
+use ethers::utils::hex;
 use iri_string::spec::UriSpec;
 use iri_string::types::RiString;
 use sqlx::PgPool;
-use siwe::{Message, TimeStamp, Version};
+use siwe::{Message as SiweMessage, TimeStamp, VerificationOpts, Version};
 use time::OffsetDateTime;
 use vectra_storage::repo::auth::{delete_login_session, get_nonce, upsert_nonce};
 use vectra_storage::repo::user::get_or_create_user;
@@ -43,7 +44,7 @@ pub async fn generate_nonce(
     let now: TimeStamp = OffsetDateTime::now_utc().into();
 
     // Build the SIWE message
-    let siwe_msg = Message {
+    let siwe_msg = SiweMessage {
         domain,
         address,
         statement: Some("Sign in to Vectra".into()),
@@ -77,52 +78,66 @@ pub async fn verify_signature(
     State(pool): State<PgPool>,
     Json(req): Json<VerifyRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
-    // 1) Fetch stored nonce + timestamp option
+    // 1) Fetch stored nonce + timestamp
     let (expected_nonce, created_at) = get_nonce(&pool, &req.wallet_address)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?
         .ok_or_else(|| AppError::Unauthorized("Nonce not found".into()))?;
 
-    // 2) Convert to UTC DateTime and enforce a 10-minute TTL
+    // 2) Enforce 10-minute TTL
     let created_at_utc = Utc.from_utc_datetime(&created_at);
     if Utc::now().signed_duration_since(created_at_utc) > Duration::minutes(10) {
         delete_login_session(&pool, &req.wallet_address).await.ok();
         return Err(AppError::Unauthorized("Nonce expired".into()));
     }
 
-    // 3) Rebuild and compare the expected message
-    let expected_msg = format!(
-        "Sign in to Vectra\nWallet: {}\nNonce: {}",
-        req.wallet_address, expected_nonce
-    );
-    if req.message != expected_msg {
+    // 3) Parse the SIWE message
+    let siwe_msg = req
+        .message
+        .parse::<SiweMessage>()
+        .map_err(|e| AppError::Unauthorized(format!("Malformed SIWE message: {}", e)))?;
+
+    // 4) Ensure the nonce matches
+    if siwe_msg.nonce != expected_nonce {
         delete_login_session(&pool, &req.wallet_address).await.ok();
-        return Err(AppError::Unauthorized("Message mismatch".into()));
+        return Err(AppError::Unauthorized("Nonce mismatch".into()));
     }
 
-    // 4) Recover signer and verify address
-    let signer = recover_wallet_address(&req.message, &req.signature)
-        .ok_or_else(|| AppError::Unauthorized("Invalid signature".into()))?;
-    if signer.to_lowercase() != req.wallet_address.to_lowercase() {
+    // 5) Decode the hex signature into bytes
+    let sig_bytes = hex::decode(req.signature.trim_start_matches("0x"))
+        .map_err(|e| AppError::BadRequest(format!("Invalid signature format: {}", e)))?;
+
+    // 6) Verify the signature
+    let opts = VerificationOpts::default();
+    siwe_msg
+        .verify(&sig_bytes, &opts)
+        .await
+        .map_err(|e| AppError::Unauthorized(format!("Signature verification failed: {}", e)))?;
+
+    // 7) Parse the claimed address string into [u8; 20]
+    let expected_addr: Address = req
+        .wallet_address
+        .parse()
+        .map_err(|e| AppError::BadRequest(format!("Invalid wallet address: {}", e)))?;
+    let expected_addr_bytes = expected_addr.0;
+
+    // 8) Compare the two 20-byte addresses
+    if siwe_msg.address != expected_addr_bytes {
         delete_login_session(&pool, &req.wallet_address).await.ok();
-        return Err(AppError::Unauthorized(
-            "Signature doesn't match address".into(),
-        ));
+        return Err(AppError::Unauthorized("Address mismatch".into()));
     }
 
-    // 5) Create or fetch the user record
+    // 9) Fetch or create the user and issue a JWT
     let user = get_or_create_user(&pool, &req.wallet_address)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
-
-    // 6) Issue a JWT
     let token = issue_jwt(&user.id)?;
 
-    // 7) Invalidate the nonce on successful login
+    // 10) Invalidate the nonce
     delete_login_session(&pool, &req.wallet_address)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
-    // 8) Return the token
+    // 11) Return the token
     Ok(Json(AuthResponse { token }))
 }
