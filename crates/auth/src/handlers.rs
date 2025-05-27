@@ -4,7 +4,7 @@ use crate::{error::AppError, types::*, utils};
 use axum::http::uri::Authority;
 use axum::{extract::State, Json};
 use axum_macros::debug_handler;
-use chrono::{Duration, TimeZone, Utc};
+use chrono::{Duration, Utc};
 use ethers::types::Address;
 use ethers::utils::hex;
 use iri_string::spec::UriSpec;
