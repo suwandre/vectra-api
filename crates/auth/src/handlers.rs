@@ -1,4 +1,5 @@
 use crate::jwt::issue_jwt;
+use crate::service::issue_tokens;
 use crate::{error::AppError, types::*, utils};
 use axum::http::uri::Authority;
 use axum::{extract::State, Json};
@@ -8,12 +9,11 @@ use ethers::types::Address;
 use ethers::utils::hex;
 use iri_string::spec::UriSpec;
 use iri_string::types::RiString;
-use sqlx::PgPool;
 use siwe::{Message as SiweMessage, TimeStamp, VerificationOpts, Version};
+use sqlx::PgPool;
 use time::OffsetDateTime;
 use vectra_storage::repo::auth::{delete_login_session, get_nonce, upsert_nonce};
 use vectra_storage::repo::user::get_or_create_user;
-
 
 /// Generates a login nonce for the given wallet address.
 /// This message is later signed by the wallet to prove ownership.
@@ -85,8 +85,7 @@ pub async fn verify_signature(
         .ok_or_else(|| AppError::Unauthorized("Nonce not found".into()))?;
 
     // 2) Enforce 10-minute TTL
-    let created_at_utc = Utc.from_utc_datetime(&created_at);
-    if Utc::now().signed_duration_since(created_at_utc) > Duration::minutes(10) {
+    if Utc::now().signed_duration_since(created_at) > Duration::minutes(10) {
         delete_login_session(&pool, &req.wallet_address).await.ok();
         return Err(AppError::Unauthorized("Nonce expired".into()));
     }
@@ -140,4 +139,23 @@ pub async fn verify_signature(
 
     // 11) Return the token
     Ok(Json(AuthResponse { token }))
+}
+
+/// Refreshes the user’s authentication tokens.
+///
+/// Given a valid `RefreshRequest` (with `user_id` + `refresh_token`),  
+/// this endpoint verifies the refresh token, then issues a new short-lived  
+/// access JWT and a new (or rotated) refresh token.  
+///
+/// Returns `RefreshResponse { access_token, refresh_token }`.
+#[debug_handler]
+pub async fn refresh_tokens(
+    State(pool): State<PgPool>,
+    Json(req): Json<RefreshRequest>,
+) -> Result<Json<RefreshResponse>, AppError> {
+    let (access, refresh) = issue_tokens(&pool, req.user_id).await?;
+    Ok(Json(RefreshResponse {
+        access_token: access,
+        refresh_token: refresh,
+    }))
 }

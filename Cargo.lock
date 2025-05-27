@@ -4252,6 +4252,7 @@ dependencies = [
  "rand 0.9.1",
  "serde",
  "serde_json",
+ "sha2",
  "siwe",
  "sqlx",
  "time",

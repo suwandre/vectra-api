@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// Represents a SIWE nonce request.
 #[derive(Deserialize)]
@@ -36,4 +37,22 @@ pub struct VerifyRequest {
 pub struct AuthResponse {
     /// The authentication token generated for the user.
     pub token: String,
+}
+
+/// Client → server when asking for new access + refresh tokens
+#[derive(Deserialize)]
+pub struct RefreshRequest {
+    /// The user’s UUID
+    pub user_id: Uuid,
+    /// The raw refresh token string
+    pub refresh_token: String,
+}
+
+/// Server → client with the new access + refresh tokens
+#[derive(Serialize)]
+pub struct RefreshResponse {
+    /// New short‐lived access JWT
+    pub access_token: String,
+    /// New (or same) refresh token
+    pub refresh_token: String,
 }
