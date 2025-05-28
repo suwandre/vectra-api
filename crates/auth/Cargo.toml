@@ -19,4 +19,5 @@ siwe = { workspace = true }
 iri-string = { workspace = true }
 time = { workspace = true }
 sha2 = { workspace = true }
+tracing = { workspace = true }
 vectra-storage = { path = "../storage" }

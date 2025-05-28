@@ -4354,6 +4354,7 @@ dependencies = [
  "siwe",
  "sqlx",
  "time",
+ "tracing",
  "uuid 1.16.0",
  "vectra-storage",
 ]

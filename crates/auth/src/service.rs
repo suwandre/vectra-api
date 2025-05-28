@@ -3,14 +3,18 @@ use crate::jwt::issue_jwt;
 use chrono::{Duration, Utc};
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
+use tracing::instrument;
 use uuid::Uuid;
 use vectra_storage::repo::auth::insert_refresh_token;
 
 /// Issues a short-lived access JWT plus a long-lived refresh token (and persists it).
+#[instrument(skip(pool))]
 pub async fn issue_tokens(
     pool: &PgPool,
     user_id: Uuid,
 ) -> Result<(String /* access */, String /* refresh */), AppError> {
+    tracing::info!(%user_id, "Issuing access + refresh tokens");
+
     // 1) Access token from the JWT layer
     let access = issue_jwt(&user_id)?;
 

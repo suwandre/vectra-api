@@ -11,16 +11,19 @@ use iri_string::types::RiString;
 use siwe::{Message as SiweMessage, TimeStamp, VerificationOpts, Version};
 use sqlx::PgPool;
 use time::OffsetDateTime;
+use tracing::instrument;
 use vectra_storage::repo::auth::{delete_login_session, get_nonce, upsert_nonce};
 use vectra_storage::repo::user::get_or_create_user;
 
 /// Generates a login nonce for the given wallet address.
 /// This message is later signed by the wallet to prove ownership.
+#[instrument(skip(pool, req), fields(wallet = %req.wallet_address))]
 #[debug_handler]
 pub async fn generate_nonce(
     State(pool): State<PgPool>,    // Inject the database connection pool
     Json(req): Json<NonceRequest>, // Extract JSON body into NonceRequest
 ) -> Result<Json<NonceResponse>, AppError> {
+    tracing::debug!(%req.wallet_address, "Generating nonce for login.");
     // Generate the random nonce and instantiate all the required fields for `siwe_msg`
     let nonce = utils::generate_nonce();
 
@@ -72,11 +75,14 @@ pub async fn generate_nonce(
 
 /// Verifies the signed message and logs the user in.
 /// If the user doesn't exist, they're created on the fly.
+#[instrument(skip(pool, req), fields(wallet = %req.wallet_address))]
 #[debug_handler]
 pub async fn verify_signature(
     State(pool): State<PgPool>,
     Json(req): Json<VerifyRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
+    tracing::debug!(%req.wallet_address, "Verifying signature for login.");
+    
     // 1) Fetch stored nonce + timestamp
     let (expected_nonce, created_at) = get_nonce(&pool, &req.wallet_address)
         .await
