@@ -158,11 +158,14 @@ pub async fn verify_signature(
 /// access JWT and a new (or rotated) refresh token.  
 ///
 /// Returns `RefreshResponse { access_token, refresh_token }`.
+/// #[instrument(skip(pool, req), fields(wallet = %req.wallet_address))]
 #[debug_handler]
 pub async fn refresh_tokens(
     State(pool): State<PgPool>,
     Json(req): Json<RefreshRequest>,
 ) -> Result<Json<RefreshResponse>, AppError> {
+    tracing::debug!(%req.user_id, "Refreshing tokens for user.");
+    
     let (access, refresh) = issue_tokens(&pool, req.user_id).await?;
     Ok(Json(RefreshResponse {
         access_token: access,
