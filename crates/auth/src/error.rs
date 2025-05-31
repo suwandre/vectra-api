@@ -3,50 +3,88 @@ use axum::{
     response::{IntoResponse},
     Json,
 };
-use serde_json::json;
+use serde::Serialize;
 use anyhow;
+use thiserror::Error;
+use sqlx::Error as SqlxError;
+use siwe::VerificationError;
+use jsonwebtoken::errors::Error as JwtError;
+use anyhow::Error as AnyhowError;
 
-/// Represents all possible application-level errors that can occur for authentication-related functionality.
-/// Converts errors into HTTP responses using Axum's `IntoResponse` trait.
-#[derive(Debug)]
-pub enum AppError {
-    /// Returned when authentication fails (e.g. bad signature or nonce mismatch).
-    Unauthorized(String),
-    /// Returned when the request is malformed or invalid.
+#[derive(Debug, Error)]
+pub enum AuthError {
+    /// 400 Bad Request: malformed JSON, missing fields, parse errors, etc.
+    #[error("Bad request: {0}")]
     BadRequest(String),
-    /// Returned when something unexpected fails internally (e.g. DB failure).
-    Internal(String),
+
+    /// 401 Unauthorized: incorrect signature, nonce mismatch, expired token, etc.
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
+
+    /// 500 Internal Server Error: any database error (e.g., failure to SELECT or INSERT).
+    #[error("Database error: {0}")]
+    Database(#[from] SqlxError),
+
+    /// 401 Unauthorized: failure parsing/verifying the SIWE message or signature.
+    #[error("SIWE verification error: {0}")]
+    Siwe(#[from] VerificationError),
+
+    /// 401 Unauthorized: any JWT encoding/decoding/validation error.
+    #[error("JWT error: {0}")]
+    Jwt(#[from] JwtError),
+
+    /// 500 Internal Server Error: catch-all for other unexpected errors, wrapped in anyhow::Error.
+    #[error("Internal server error: {0}")]
+    Internal(#[from] AnyhowError),
 }
 
-/// Converts `AppError` into an HTTP response using Axum's `IntoResponse` trait.
-impl IntoResponse for AppError {
+/// Represents the JSON body for error responses.
+#[derive(Serialize)]
+struct ErrorBody {
+    error: String,
+}
+
+/// Implements `IntoResponse` for `AuthError` to convert it into an specific HTTP response.
+impl IntoResponse for AuthError {
     fn into_response(self) -> axum::response::Response {
-        match self {
-            AppError::Unauthorized(msg) => {
-                // 401 Unauthorized with a JSON error message
-                let body = Json(json!({ "error": msg }));
-                (StatusCode::UNAUTHORIZED, body).into_response()
+        // Decide status code + message based on the variant
+        let (status, message) = match &self {
+            AuthError::BadRequest(msg)      => (StatusCode::BAD_REQUEST, msg.clone()),
+            AuthError::Unauthorized(msg)    => (StatusCode::UNAUTHORIZED, msg.clone()),
+            AuthError::Database(err)        => {
+                // For DB errors, avoid leaking raw SQL details; send a generic message
+                tracing::error!("Auth database error: {}", err);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Database error".to_string(),
+                )
             }
-            AppError::BadRequest(msg) => {
-                // 400 Bad Request with a JSON error message
-                let body = Json(json!({ "error": msg }));
-                (StatusCode::BAD_REQUEST, body).into_response()
+            AuthError::Siwe(err)            => {
+                // SIWE failures often indicate a bad signature or malformed message
+                (
+                    StatusCode::UNAUTHORIZED,
+                    err.to_string(), 
+                )
             }
-            AppError::Internal(msg) => {
-                // 500 Internal Server Error with a generic message
-                let body = Json(json!({
-                    "error": "Internal server error",
-                    "details": msg 
-                }));
-                (StatusCode::INTERNAL_SERVER_ERROR, body).into_response()
+            AuthError::Jwt(err)             => {
+                // JWT failures indicate something wrong with token creation/verification
+                (
+                    StatusCode::UNAUTHORIZED,
+                    err.to_string(),
+                )
             }
-        }
-    }
-}
+            AuthError::Internal(err)        => {
+                // Catch-all for unexpected errors; log the details, but don’t leak them to clients
+                tracing::error!("Internal auth error: {}", err);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal server error".to_string(),
+                )
+            }
+        };
 
-/// Allows using `?` with `anyhow::Error` or other fallible calls
-impl From<anyhow::Error> for AppError {
-    fn from(err: anyhow::Error) -> Self {
-        AppError::Internal(err.to_string())
+        // Build a JSON body: { "error": "<message>" }
+        let body = Json(ErrorBody { error: message });
+        (status, body).into_response()
     }
 }

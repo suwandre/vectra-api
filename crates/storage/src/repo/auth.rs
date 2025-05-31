@@ -4,7 +4,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 /// Inserts or updates a nonce for a wallet login session into the database.
-pub async fn upsert_nonce(pool: &PgPool, address: &str, nonce: &str) -> Result<()> {
+pub async fn upsert_nonce(pool: &PgPool, address: &str, nonce: &str) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO login_sessions (wallet_address, nonce)

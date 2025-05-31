@@ -1,4 +1,4 @@
-use crate::error::AppError;
+use crate::error::AuthError;
 use crate::jwt::issue_jwt;
 use chrono::{Duration, Utc};
 use sha2::{Digest, Sha256};
@@ -12,7 +12,7 @@ use vectra_storage::repo::auth::insert_refresh_token;
 pub async fn issue_tokens(
     pool: &PgPool,
     user_id: Uuid,
-) -> Result<(String /* access */, String /* refresh */), AppError> {
+) -> Result<(String /* access */, String /* refresh */), AuthError> {
     tracing::info!(%user_id, "Issuing access + refresh tokens");
 
     // 1) Access token from the JWT layer
@@ -28,7 +28,7 @@ pub async fn issue_tokens(
     let expires_at = Utc::now() + Duration::days(30);
     insert_refresh_token(pool, user_id, &refresh_hash, expires_at)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(AuthError::Database)?;
 
     Ok((access, raw_refresh))
 }

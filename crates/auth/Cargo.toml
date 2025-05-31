@@ -21,3 +21,4 @@ time = { workspace = true }
 sha2 = { workspace = true }
 tracing = { workspace = true }
 vectra-storage = { path = "../storage" }
+thiserror = { workspace = true }

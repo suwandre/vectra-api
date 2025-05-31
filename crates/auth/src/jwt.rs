@@ -1,7 +1,7 @@
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Serialize, Deserialize};
 use chrono::{Utc, Duration};
-use crate::error::AppError;
+use crate::error::AuthError;
 use uuid::Uuid;
 
 /// Claims stored inside the JWT token.
@@ -18,10 +18,10 @@ struct Claims {
 }
 
 /// Issues a JWT for the given user ID.
-pub fn issue_jwt(user_id: &Uuid) -> Result<String, AppError> {
+pub fn issue_jwt(user_id: &Uuid) -> Result<String, AuthError> {
     // 1) Load secret key
     let secret = std::env::var("JWT_SECRET")
-        .map_err(|_| AppError::Internal("Missing JWT_SECRET env var".into()))?;
+        .map_err(|_| AuthError::Internal(anyhow::anyhow!("Missing JWT_SECRET env var")))?;
     let key = EncodingKey::from_secret(secret.as_bytes());
 
     // 2) Build timestamps
@@ -46,5 +46,5 @@ pub fn issue_jwt(user_id: &Uuid) -> Result<String, AppError> {
         &claims,
         &key,
     )
-    .map_err(|e| AppError::Internal(format!("JWT encoding failed: {}", e)))
+    .map_err(AuthError::Jwt)
 }

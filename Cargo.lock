@@ -4353,6 +4353,7 @@ dependencies = [
  "sha2",
  "siwe",
  "sqlx",
+ "thiserror 2.0.12",
  "time",
  "tracing",
  "uuid 1.16.0",
