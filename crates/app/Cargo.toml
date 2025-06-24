@@ -8,3 +8,5 @@ axum = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 dotenvy = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
