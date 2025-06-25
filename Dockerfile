@@ -1,6 +1,6 @@
 # Multi-stage build for optimized Axum application
 # Builder stage - compiles the Rust application
-FROM rust:slim-bullseye as builder
+FROM rust:slim-bullseye AS builder
 
 WORKDIR /app
 
@@ -8,30 +8,25 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files first for better caching
+# Copy workspace configuration first for better caching
 COPY Cargo.toml Cargo.lock ./
 
-# Create dummy source to build dependencies
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-
-# Build dependencies (this layer will be cached)
-RUN cargo build --release && rm -rf src
-
-# Copy actual source code
+# Copy all crates (entire workspace structure)
 COPY crates ./crates
-COPY src ./src
 
-# Build the actual application
+# Build the actual application (workspace build)
 RUN cargo build --release --bin app
 
 # Runtime stage - minimal image for deployment
-FROM debian:bullseye-slim as runtime
+FROM debian:bullseye-slim AS runtime
 
-# Install runtime dependencies
+# Install runtime dependencies including curl for health checks
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security
