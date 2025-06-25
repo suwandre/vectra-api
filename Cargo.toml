@@ -32,6 +32,8 @@ thiserror = "2.0.12"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
 axum-extra = { version = "0.10.1", features = ["typed-header"] }
 async-trait = "0.1.88"
+validator = { version = "0.20.0", features = ["derive"]}
+regex = "1.11.1"
 
 api = { path = "crates/api" }
 app = { path = "crates/app" }

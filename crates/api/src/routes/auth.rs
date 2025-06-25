@@ -1,11 +1,14 @@
 //! Wallet authentication routes for MetaMask and other Web3 wallets.
 //! Handles wallet connection, nonce generation, and signature verification.
 
-use axum::{routing::post, Router, Json, http::StatusCode};
+use axum::{routing::post, Router, Json};
 use crate::types::{WalletConnectRequest, NonceResponse, WalletLoginRequest, AuthResponse, ApiResponse};
-use crate::auth_utils::{generate_nonce, create_sign_message, verify_wallet_signature, is_valid_wallet_address};
+use crate::auth_utils::{generate_nonce, create_sign_message, verify_wallet_signature};
+use crate::errors::{ApiError, ApiResult};
+use crate::middleware::validate_request;
 
 /// Creates authentication route group for wallet-based auth.
+/// Provides endpoints for wallet connection and signature verification.
 pub fn create_routes() -> Router {
     Router::new()
         .route("/wallet/connect", post(wallet_connect))
@@ -16,16 +19,9 @@ pub fn create_routes() -> Router {
 /// Client calls this first to get a message to sign with their wallet.
 async fn wallet_connect(
     Json(payload): Json<WalletConnectRequest>,
-) -> Result<Json<ApiResponse<NonceResponse>>, StatusCode> {
-    // Validate wallet address format
-    if !is_valid_wallet_address(&payload.wallet_address) {
-        let response = ApiResponse {
-            success: false,
-            data: None,
-            message: Some("Invalid wallet address format".to_string()),
-        };
-        return Ok(Json(response));
-    }
+) -> ApiResult<Json<ApiResponse<NonceResponse>>> {
+    // Validate request data
+    validate_request(&payload)?;
 
     // Generate nonce and create message to sign
     let nonce = generate_nonce();
@@ -39,7 +35,7 @@ async fn wallet_connect(
     let response = ApiResponse {
         success: true,
         data: Some(nonce_response),
-        message: Some("Please sign the message with your wallet".to_string()),
+        message: Some("Please sign the message with your wallet.".to_string()),
     };
 
     Ok(Json(response))
@@ -49,16 +45,9 @@ async fn wallet_connect(
 /// Client calls this after signing the nonce message with their wallet.
 async fn wallet_login(
     Json(payload): Json<WalletLoginRequest>,
-) -> Result<Json<ApiResponse<AuthResponse>>, StatusCode> {
-    // Validate wallet address format
-    if !is_valid_wallet_address(&payload.wallet_address) {
-        let response = ApiResponse {
-            success: false,
-            data: None,
-            message: Some("Invalid wallet address format".to_string()),
-        };
-        return Ok(Json(response));
-    }
+) -> ApiResult<Json<ApiResponse<AuthResponse>>> {
+    // Validate request data
+    validate_request(&payload)?;
 
     // Recreate the message that should have been signed
     let expected_message = create_sign_message(&payload.nonce);
@@ -86,20 +75,16 @@ async fn wallet_login(
             Ok(Json(response))
         }
         Ok(false) => {
-            let response = ApiResponse {
-                success: false,
-                data: None,
-                message: Some("Invalid signature. Please try again.".to_string()),
-            };
-            Ok(Json(response))
+            // This will now return 401 Unauthorized instead of 200 OK
+            Err(ApiError::Authentication {
+                message: "Invalid signature. Please try signing the message again.".to_string(),
+            })
         }
-        Err(_) => {
-            let response = ApiResponse {
-                success: false,
-                data: None,
-                message: Some("Error verifying signature".to_string()),
-            };
-            Ok(Json(response))
+        Err(e) => {
+            // This will return 500 Internal Server Error
+            Err(ApiError::Internal {
+                message: format!("Error verifying signature: {}", e),
+            })
         }
     }
 }

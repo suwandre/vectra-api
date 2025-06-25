@@ -1,7 +1,7 @@
 //! Wallet authentication utilities
 //! Handles wallet signature verification and nonce generation
 
-use ethers::{types::{Address, Signature}, utils};
+use ethers::{types::{Address, Signature}};
 use uuid::Uuid;
 
 /// Generates a random nonce for wallet signature.
