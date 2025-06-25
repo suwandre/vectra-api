@@ -12,7 +12,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/", axum::routing::get(|| async { "Vectra DEX - More Than a DEX. It's an Arena." }))
         .nest("/api/v1", api::create_router().await);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     let listener = TcpListener::bind(addr).await?;
     
     info!("🚀 Vectra DEX server starting on http://{}", addr);
