@@ -1,6 +1,6 @@
 # Multi-stage build for optimized Axum application
 # Builder stage - compiles the Rust application
-FROM rust:1.75-slim-bullseye AS builder
+FROM rust:1.87-slim-bullseye AS builder
 
 WORKDIR /app
 
