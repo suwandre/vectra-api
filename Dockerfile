@@ -35,7 +35,7 @@ USER vectrauser
 
 WORKDIR /app
 
-# Copy the compiled binary from builder stage - FIXED NAMING
+# Copy the compiled binary from builder stage
 COPY --from=builder /app/target/release/app /app/vectra-api
 
 # Set environment variables
