@@ -1,6 +1,6 @@
 # Multi-stage build for optimized Axum application
 # Builder stage - compiles the Rust application
-FROM rust:slim-bullseye AS builder
+FROM rust:1.75-slim-bullseye AS builder
 
 WORKDIR /app
 
@@ -35,19 +35,19 @@ USER vectrauser
 
 WORKDIR /app
 
-# Copy the compiled binary from builder stage
-COPY --from=builder /app/target/release/app /app/vectra-dex
+# Copy the compiled binary from builder stage - FIXED NAMING
+COPY --from=builder /app/target/release/app /app/vectra-api
 
 # Set environment variables
 ENV RUST_LOG=info
-ENV PORT=8080
+ENV PORT=5000
 
 # Expose the port that Elastic Beanstalk expects
-EXPOSE 8080
+EXPOSE 5000
 
 # Health check endpoint for Elastic Beanstalk
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:5000/health || exit 1
 
-# Start the application
-ENTRYPOINT ["/app/vectra-dex"]
+# Start the application - FIXED TO MATCH BINARY NAME
+ENTRYPOINT ["/app/vectra-api"]

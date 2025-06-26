@@ -16,9 +16,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get port from environment variable (Elastic Beanstalk requirement)
     let port = std::env::var("PORT")
-        .unwrap_or_else(|_| "8080".to_string())
+        .unwrap_or_else(|_| "5000".to_string())
         .parse::<u16>()
-        .unwrap_or(8080);
+        .unwrap_or(5000);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = TcpListener::bind(addr).await?;
