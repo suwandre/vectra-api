@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the main application router
     let app = create_app().await?;
 
-    // Get port from environment variable (Elastic Beanstalk requirement)
+    // Get port from environment (EB uses 5000 by default)
     let port = std::env::var("PORT")
         .unwrap_or_else(|_| "5000".to_string())
         .parse::<u16>()
