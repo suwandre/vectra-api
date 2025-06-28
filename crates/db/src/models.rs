@@ -20,10 +20,10 @@ pub struct User {
     pub xp_points: u32,
     /// User's current seasonal level based on XP.
     pub level: u8,
-    /// Total value of user's paper trading portfolio.
-    pub portfolio_value: u64,
-    /// Available cash balance for trading.
-    pub cash_balance: u64,
+    /// Total value of user's paper trading portfolio. Represented in cents.
+    pub portfolio_value_cents: u64,
+    /// Available cash balance for trading. Represented in cents.
+    pub cash_balance_cents: u64,
     /// When the user account was created.
     pub created_at: DateTime<Utc>,
     /// When the user account was last updated.

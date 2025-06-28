@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/api", "crates/app", "crates/db"]
+members = ["crates/api", "crates/app", "crates/db", "crates/game"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -39,3 +39,4 @@ regex = "1.11.1"
 api = { path = "crates/api" }
 app = { path = "crates/app" }
 db = { path = "crates/db" }
+game = { path = "crates/game" }
