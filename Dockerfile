@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
     libpq5 \
-    # netcat \
+    netcat \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -ms /bin/bash appuser
 
