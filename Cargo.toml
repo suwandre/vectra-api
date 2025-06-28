@@ -17,7 +17,8 @@ sqlx = { version = "0.8.6", features = [
   "macros",
   "uuid",
   "chrono",
-  "migrate"
+  "migrate",
+  "tls-rustls"
 ] }
 tokio = { version = "1.45.0", features = ["full"] }
 tower-http = { version = "0.6.4", features = ["cors", "trace"] }
