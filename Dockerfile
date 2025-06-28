@@ -28,11 +28,12 @@ RUN cargo build --release --bin app
 # Runtime stage - minimal image for deployment
 FROM debian:bullseye-slim AS runtime
 
-# Install runtime dependencies
+# Install runtime dependencies including netcat for connectivity testing
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
     libpq5 \
+    netcat \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -ms /bin/bash appuser
 
