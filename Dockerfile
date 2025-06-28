@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install sqlx-cli for database migrations
-RUN cargo install sqlx-cli --no-default-features --features postgres
+# Install sqlx-cli for database migrations WITH TLS support
+RUN cargo install sqlx-cli --no-default-features --features postgres,rustls
 
 # Copy workspace files for dependency caching
 COPY Cargo.toml Cargo.lock ./
@@ -28,7 +28,7 @@ RUN cargo build --release --bin app
 # Runtime stage - minimal image for deployment
 FROM debian:bullseye-slim AS runtime
 
-# Install runtime dependencies including netcat for connectivity testing and postgres
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
