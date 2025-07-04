@@ -26,6 +26,30 @@ pub struct WalletConnectRequest {
     pub wallet_address: String,
 }
 
+/// Response for successful wallet connection with database integration.
+/// Returns user information from the database.
+#[derive(Debug, Serialize)]
+pub struct WalletConnectResponse {
+    /// Whether this is a new user account.
+    pub is_new_user: bool,
+    /// User's unique identifier.
+    pub user_id: Uuid,
+    /// User's wallet address.
+    pub wallet_address: String,
+    /// User's display name (if set).
+    pub username: Option<String>,
+    /// Current XP points.
+    pub xp_points: u32,
+    /// Current level.
+    pub level: u8,
+    /// Portfolio value in cents.
+    pub portfolio_value_cents: u64,
+    /// Available cash balance in cents.
+    pub cash_balance_cents: u64,
+    /// Success message.
+    pub message: String,
+}
+
 /// Response containing nonce for wallet signature.
 /// Provides the message that needs to be signed by the user's wallet.
 #[derive(Serialize)]
@@ -126,4 +150,13 @@ pub struct ApiResponse<T> {
     pub data: Option<T>,
     /// Success or informational message.
     pub message: Option<String>,
+}
+
+/// Database health check response.
+#[derive(Debug, Serialize)]
+pub struct DBHealthResponse {
+    /// Status message.
+    pub status: String,
+    /// Database connectivity status.
+    pub database: String,
 }
