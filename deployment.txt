@@ -1,0 +1,5 @@
+1. call `./scripts/update-db.sh` to check and update migrations and queries if need be.
+2. Commit everything together:
+  git add .
+  git commit -m "feat: <added new queries/migrations or some other text>"
+  git push origin main

@@ -6,7 +6,23 @@ on:
       - main
 
 jobs:
+  verify-sqlx-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: actions-setup-rust@v1
+        
+      - name: Verify SQLx cache is up-to-date
+        run: |
+          # This will fail if cache is outdated
+          cargo sqlx prepare --check --workspace
+        env:
+          SQLX_OFFLINE: true
   build-and-deploy:
+    # This job depends on the verify-sqlx-cache job to ensure the SQLx cache is up-to-date
+    needs: verify-sqlx-cache
     runs-on: ubuntu-latest
     
     steps:
