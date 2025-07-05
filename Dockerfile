@@ -22,6 +22,12 @@ COPY crates ./crates
 # Copy migration files
 COPY migrations ./migrations
 
+# Copy SQLx query cache for offline compilation
+COPY .sqlx ./.sqlx
+
+# Set SQLx to offline mode
+ENV SQLX_OFFLINE=true
+
 # Build the application in release mode
 RUN cargo build --release --bin app
 
