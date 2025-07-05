@@ -58,11 +58,11 @@ COPY --from=builder /usr/local/cargo/bin/sqlx /usr/local/bin/sqlx
 COPY --from=builder /app/migrations /app/migrations
 
 # Copy startup script
-COPY startup.sh /app/startup.sh
+COPY scripts/startup.sh /app/scripts/startup.sh
 
 # Make startup script executable
 USER root
-RUN chmod +x /app/startup.sh
+RUN chmod +x /app/scripts/startup.sh
 USER appuser
 
 # Environment variables
@@ -77,4 +77,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
 # Use startup script as entrypoint
-ENTRYPOINT ["/app/startup.sh"]
+ENTRYPOINT ["/app/scripts/startup.sh"]
