@@ -1,17 +1,5 @@
-# Multi-stage build for Rust application with PostgreSQL support and optimized caching
-
-# Chef stage for dependency caching optimization
-FROM rust:1.87-slim-bullseye AS chef
-RUN cargo install cargo-chef
-WORKDIR /app
-
-# Planner stage - analyzes dependencies for caching
-FROM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-# Builder stage - compiles the application
-FROM chef AS builder
+# Multi-stage build for Rust application with PostgreSQL support
+FROM rust:1.87-slim-bullseye AS builder
 
 WORKDIR /app
 
@@ -25,11 +13,7 @@ RUN apt-get update && apt-get install -y \
 # Install sqlx-cli for database migrations WITH TLS support
 RUN cargo install sqlx-cli --no-default-features --features postgres,rustls
 
-# Copy recipe and build dependencies first (for optimal caching)
-COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
-
-# Copy workspace files
+# Copy workspace files for dependency caching
 COPY Cargo.toml Cargo.lock ./
 
 # Copy all crates for workspace build
@@ -41,7 +25,7 @@ COPY migrations ./migrations
 # Copy SQLx query cache for offline compilation
 COPY .sqlx ./.sqlx
 
-# Set SQLx to offline mode to avoid database connection during build
+# Set SQLx to offline mode
 ENV SQLX_OFFLINE=true
 
 # Build the application in release mode
