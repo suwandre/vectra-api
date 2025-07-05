@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install SQLx CLI
+        run: |
+          cargo install sqlx-cli --no-default-features --features postgres,rustls
         
       - name: Verify SQLx cache is up-to-date
         run: |
