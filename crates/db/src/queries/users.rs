@@ -26,10 +26,10 @@ pub async fn create_user(
         user_id,
         wallet_address,
         username,
-        0i32,       // PostgreSQL INTEGER (will be cast to u32)
-        1i16,       // PostgreSQL SMALLINT (will be cast to u8)
-        1000000i64, // $10,000 in cents
-        1000000i64, // $10,000 in cents
+        0i32,       // xp_points (now i32)
+        1i16,       // level (i16)
+        1000000i64, // portfolio_value_cents (i64) - $10,000 in cents
+        1000000i64, // cash_balance_cents (i64) - $10,000 in cents
         now,
         now
     )
@@ -77,9 +77,9 @@ pub async fn find_user_by_id(
 pub async fn update_user_xp(
     pool: &PgPool,
     user_id: Uuid,
-    xp_points: u32,  // ✅ Changed to u32 for consistency
+    xp_points: i64,
 ) -> Result<User, sqlx::Error> {
-    let level = game::calculate_level_from_xp(xp_points);
+    let level = game::calculate_level_from_xp(xp_points as u32);
     let now = Utc::now();
     
     let user = sqlx::query_as!(
@@ -91,8 +91,8 @@ pub async fn update_user_xp(
         RETURNING *
         "#,
         user_id,
-        xp_points as i32,  // Cast u32 to i32 for PostgreSQL
-        level as i16,      // Cast u8 to i16 for PostgreSQL
+        xp_points as i32,
+        level as i16,
         now
     )
     .fetch_one(pool)

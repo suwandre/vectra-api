@@ -1,8 +1,11 @@
 //! Vectra DEX API library.
 //! Contains all HTTP route definitions and handlers for the gamified DEX.
 
-use axum::{middleware as axum_middleware, Router};
+use std::sync::Arc;
+
+use axum::{extract::State, middleware as axum_middleware, Router};
 use tower_http::trace::TraceLayer;
+use sqlx;
 
 pub mod routes;
 pub mod types;
@@ -22,7 +25,7 @@ pub async fn create_router(db_pool: sqlx::PgPool) -> Router {
     Router::new()
         .route("/", axum::routing::get(|| async { "Vectra DEX API v0.1" }))
         .route("/health", axum::routing::get(|| async { "API Health: OK" }))
-        .route("/health/db", health_check_db)
+        .route("/health/db", axum::routing::get(health_check_db))
         // Group authentication endpoints under /auth
         .nest("/auth", routes::auth::create_routes())
         // Group trading endpoints under /trading  
@@ -38,7 +41,7 @@ pub async fn create_router(db_pool: sqlx::PgPool) -> Router {
 /// Database health check endpoint.
 /// Verifies database connectivity and returns status.
 async fn health_check_db(
-    axum::extract::State(state): axum::extract::State<SharedState>
+    State(state): State<SharedState>
 ) -> Result<String, String> {
     match sqlx::query("SELECT 1").execute(&state.db_pool).await {
         Ok(_) => Ok("Database connection healthy".to_string()),

@@ -6,6 +6,7 @@ use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tracing::info;
 use sqlx;
+use db::{create_pool, test_connection, DatabaseConfig};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -26,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Create the main application router
-    let app = create_app(db_pool).await?;
+    let app = create_app(db_pool.unwrap()).await?;
 
     // Get port from environment (EB uses 5000 by default)
     let port = std::env::var("PORT")
@@ -74,10 +75,4 @@ async fn create_app(db_pool: sqlx::PgPool) -> Result<Router, Box<dyn std::error:
         .nest("/api/v1", api::create_router(db_pool).await);
 
     Ok(app)
-}
-
-/// Health check endpoint for Elastic Beanstalk load balancer.
-/// Returns 200 OK when the application is healthy and ready to serve requests.
-async fn health_check() -> &'static str {
-    "OK"
 }

@@ -1,13 +1,16 @@
 //! Wallet authentication routes for MetaMask and other Web3 wallets.
 //! Handles wallet connection, nonce generation, and signature verification.
 
-use axum::{routing::post, Router, Json};
-use db::queries::users;
-use crate::state::SharedState;
-use crate::types::{WalletConnectRequest, NonceResponse, WalletLoginRequest, AuthResponse, ApiResponse};
-use crate::auth_utils::{generate_nonce, create_sign_message, verify_wallet_signature};
+use crate::auth_utils::{create_sign_message, generate_nonce, verify_wallet_signature};
 use crate::errors::{ApiError, ApiResult};
 use crate::middleware::validate_request;
+use crate::state::SharedState;
+use crate::types::{
+    ApiResponse, AuthResponse, NonceResponse, WalletConnectRequest, WalletLoginRequest,
+};
+use axum::extract::State;
+use axum::{Json, Router, routing::post};
+use db::queries::users;
 
 /// Creates authentication route group for wallet-based auth.
 /// Provides endpoints for wallet connection and signature verification.
@@ -20,7 +23,6 @@ pub fn create_routes() -> Router<SharedState> {
 /// Initiates wallet connection by providing a nonce to sign.
 /// Client calls this first to get a message to sign with their wallet.
 async fn wallet_connect(
-    State(state): State<SharedState>,
     Json(payload): Json<WalletConnectRequest>,
 ) -> ApiResult<Json<ApiResponse<NonceResponse>>> {
     // Validate request data
@@ -46,6 +48,7 @@ async fn wallet_connect(
 
 /// Completes wallet authentication by verifying the signed message.
 /// Client calls this after signing the nonce message with their wallet.
+#[axum::debug_handler]
 async fn wallet_login(
     State(state): State<SharedState>,
     Json(payload): Json<WalletLoginRequest>,
@@ -54,7 +57,11 @@ async fn wallet_login(
 
     let expected_message = create_sign_message(&payload.nonce);
 
-    match verify_wallet_signature(&expected_message, &payload.signature, &payload.wallet_address) {
+    match verify_wallet_signature(
+        &expected_message,
+        &payload.signature,
+        &payload.wallet_address,
+    ) {
         Ok(true) => {
             // Replace mock data with real database operations
             match users::find_user_by_wallet(&state.db_pool, &payload.wallet_address).await {
@@ -75,7 +82,7 @@ async fn wallet_login(
                     };
 
                     Ok(Json(response))
-                },
+                }
                 Ok(None) => {
                     // Create new user
                     match users::create_user(&state.db_pool, &payload.wallet_address, None).await {
@@ -91,29 +98,32 @@ async fn wallet_login(
                             let response = ApiResponse {
                                 success: true,
                                 data: Some(auth_response),
-                                message: Some("Welcome to Vectra DEX! Your account has been created.".to_string()),
+                                message: Some(
+                                    "Welcome to Vectra DEX! Your account has been created."
+                                        .to_string(),
+                                ),
                             };
 
                             Ok(Json(response))
-                        },
+                        }
                         Err(_) => Err(ApiError::Internal {
                             message: "Failed to create user account".to_string(),
-                        })
+                        }),
                     }
-                },
+                }
                 Err(_) => Err(ApiError::Internal {
                     message: "Database connection failed".to_string(),
-                })
+                }),
             }
         }
-        Ok(false) => {
-            Err(ApiError::Authentication {
-                message: "Invalid signature. Please try signing the message again.".to_string(),
-            })
-        }
+        Ok(false) => Err(ApiError::Authentication {
+            message: "Invalid signature. Please try signing the message again.".to_string(),
+        }),
         Err(e) => {
+            // Convert error to string immediately to avoid Send issues
+            let error_message = e.to_string();
             Err(ApiError::Internal {
-                message: format!("Error verifying signature: {}", e),
+                message: format!("Error verifying signature: {}", error_message),
             })
         }
     }

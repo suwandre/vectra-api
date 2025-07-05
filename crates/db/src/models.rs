@@ -17,13 +17,13 @@ pub struct User {
     /// User's display username (optional).
     pub username: Option<String>,
     /// User's current XP points for gamification.
-    pub xp_points: u32,
+    pub xp_points: i32,
     /// User's current seasonal level based on XP.
-    pub level: u8,
+    pub level: i16,
     /// Total value of user's paper trading portfolio. Represented in cents.
-    pub portfolio_value_cents: u64,
+    pub portfolio_value_cents: i64,
     /// Available cash balance for trading. Represented in cents.
-    pub cash_balance_cents: u64,
+    pub cash_balance_cents: i64,
     /// When the user account was created.
     pub created_at: DateTime<Utc>,
     /// When the user account was last updated.

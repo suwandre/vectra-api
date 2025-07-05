@@ -3,6 +3,17 @@
 
 use ethers::{types::{Address, Signature}};
 use uuid::Uuid;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum WalletVerificationError {
+    #[error("Invalid signature format")]
+    InvalidSignature,
+    #[error("Address recovery failed")]
+    AddressRecovery,
+    #[error("Signature verification failed: {0}")]
+    VerificationFailed(String),
+}
 
 /// Generates a random nonce for wallet signature.
 /// Returns a unique string that the wallet will sign.
@@ -25,18 +36,21 @@ pub fn verify_wallet_signature(
     message: &str,
     signature: &str,
     expected_address: &str,
-) -> Result<bool, Box<dyn std::error::Error>> {
+) -> Result<bool, WalletVerificationError> {
     // Hash the message (Ethereum-specific message prefix)
     let msg_hash = ethers::utils::hash_message(message);
 
     // Parse the signature
-    let signature = signature.parse::<Signature>()?;
+    let signature = signature.parse::<Signature>().map_err(|_| WalletVerificationError::InvalidSignature)?;
+
 
     // Recover the address from the signature
-    let recovered_address = signature.recover(msg_hash)?;
+    let recovered_address = signature.recover(msg_hash)
+        .map_err(|_| WalletVerificationError::AddressRecovery)?;
 
     // Parse the expected address
-    let expected = expected_address.parse::<Address>()?;
+    let expected = expected_address.parse::<Address>()
+        .map_err(|_| WalletVerificationError::VerificationFailed("Invalid expected address format".to_string()))?;
 
     Ok(recovered_address == expected)
 }

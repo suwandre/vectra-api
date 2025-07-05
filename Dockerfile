@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install sqlx-cli for database migrations WITH TLS support
-RUN cargo install sqlx-cli --no-default-features --features postgres,rustls
+RUN cargo install sqlx-cli --no-default-features --features postgres,rustls,bigdecimal
 
 # Copy workspace files for dependency caching
 COPY Cargo.toml Cargo.lock ./

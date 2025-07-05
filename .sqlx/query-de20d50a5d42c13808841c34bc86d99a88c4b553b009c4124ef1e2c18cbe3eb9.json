@@ -1,0 +1,78 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO users (id, wallet_address, username, xp_points, level, portfolio_value_cents, cash_balance_cents, created_at, updated_at)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n        RETURNING *\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "wallet_address",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "username",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "xp_points",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "level",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 5,
+        "name": "portfolio_value_cents",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "cash_balance_cents",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Int4",
+        "Int2",
+        "Int8",
+        "Int8",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "de20d50a5d42c13808841c34bc86d99a88c4b553b009c4124ef1e2c18cbe3eb9"
+}

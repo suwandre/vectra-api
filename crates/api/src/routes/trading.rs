@@ -1,6 +1,8 @@
 use axum::{routing::get, Router};
 
-pub fn create_routes() -> Router {
+use crate::state::SharedState;
+
+pub fn create_routes() -> Router<SharedState> {
     Router::new()
         .route("/portfolio", get(get_portfolio))
         .route("/trades", get(get_trades))

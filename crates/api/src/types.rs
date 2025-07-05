@@ -2,6 +2,7 @@
 //! These types define the shape of data flowing through the Vectra DEX API.
 
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use validator::Validate;
 use std::sync::LazyLock;
 use regex::Regex;
