@@ -10,9 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Rust
-        uses: actions-setup-rust@v1
         
       - name: Verify SQLx cache is up-to-date
         run: |
